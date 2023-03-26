@@ -1,19 +1,24 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
+
 #include<iostream>
 #include<ctime>
 #include <stdlib.h>
-#include <SDL2/SDL_ttf.h>
-#define SCREEN_WIDTH 640
-#define SCREEN_HEIGHT 480
 #include <stdio.h>
 #include<cstring>
+
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 480
+
+long long i,j;
+
 using namespace std;
-// fps
-float fps(){
+
+static float fps(){
     static int a=clock();
-    float fps;
     a=clock()-a;
-    fps=(float)6000/a;
+    float fps=(float)1000/a;
     a=clock();
     return fps;
 }
@@ -32,10 +37,28 @@ static SDL_Texture *loadText(SDL_Renderer *renderer, const char *text)
 		fprintf(stderr, "TTF_OpenFont Error: %s\n", TTF_GetError());
 		return NULL;
 	}
-	SDL_Color color = {255, 255, 255};
+	SDL_Color color = {90, 90, 90};
 	SDL_Surface *surface = TTF_RenderText_Solid(font, text, color);
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
 	SDL_FreeSurface(surface);
+	if (texture == NULL)
+	{
+		fprintf(stderr, "SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
+		return NULL;
+	}
+	return texture;
+}
+
+static SDL_Texture *loadImage(SDL_Renderer *renderer, const char *path)
+{
+	SDL_Surface *img = IMG_Load(path);
+	if (img == NULL)
+	{
+		fprintf(stderr, "IMG_Load Error: %s\n", IMG_GetError());
+		return NULL;
+	}
+	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, img);
+	SDL_FreeSurface(img);
 	if (texture == NULL)
 	{
 		fprintf(stderr, "SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
@@ -67,16 +90,11 @@ int main(int argc, char *argv[])
 	// Better scaling quality
  	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
 	SDL_Texture *textTexture[] = {
-	loadText(renderer, "0"),
-	loadText(renderer, "1"),
-	loadText(renderer, "2"),
-	loadText(renderer, "3"),
-	loadText(renderer, "4"),
-	loadText(renderer, "5"),
-	loadText(renderer, "6"),
-	loadText(renderer, "7"),
-	loadText(renderer, "8"),
-	loadText(renderer, "9")
+	loadText(renderer, "0"),loadText(renderer, "1"),
+	loadText(renderer, "2"),loadText(renderer, "3"),
+	loadText(renderer, "4"),loadText(renderer, "5"),
+	loadText(renderer, "6"),loadText(renderer, "7"),
+	loadText(renderer, "8"),loadText(renderer, "9")
 	};
 	SDL_Texture *textTexture_a = loadText(renderer, ".");
 	/*if (textTexture0 == NULL||textTexture1==NULL
@@ -85,36 +103,57 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Couldn't load text texture\n");
 		return 1;
 	}*/
+	// img
+	SDL_Texture *imageTexture = loadImage(renderer, "a.png");
+	if (imageTexture == NULL)
+	{
+		fprintf(stderr, "Couldn't load image\n");
+		return 1;
+	}
 	int tw, th;
 	SDL_QueryTexture(*textTexture, NULL, NULL, &tw, &th);
-	//SDL_QueryTexture(textTexture1, NULL, NULL, &tw, &th);
 	int w, h;
 	SDL_GetRendererOutputSize(renderer, &w, &h);
 	SDL_Rect dest;
-	int b;
+	SDL_Event ev;
 	while(true){
+   //test
+   SDL_MultiGestureEvent Event;
+   if (SDL_PollEvent(&ev))
+      switch(ev.type){
+       // case SDL_MultiGestureEvent:
+         case SDL_MULTIGESTURE:
+            return 1;
+      }
+	//clear
+	SDL_RenderClear(renderer);
 	
+	SDL_Rect destImg;
+	destImg.w=32;
+	destImg.h=32;
+	for(i=0;i<=SCREEN_HEIGHT +770 ;i+=32)
+	for(j=0;j<=SCREEN_WIDTH +70;j+=32 ){
+	 destImg.x=j;
+	 destImg.y=i;
+  SDL_RenderCopy(renderer, imageTexture, NULL, &destImg);
+	}
 	// Our text always has width much bigger than height, use this
 	dest.x = 0;
-	w=20; // my edit
+	w=20;
 	dest.w = w;
 	dest.h = th * w / tw;
 	//dest.y = (h - dest.h) / 2;
 	dest.y=1;
-	SDL_RenderClear(renderer);
 	string num=to_string(fps());
-	for(int i=0;i<num.size();i++){
+	for(int i=0;i<num.size();i++,dest.x+=22){
 	if (num[i]=='.'){
-	  SDL_RenderCopy(renderer, textTexture_a, NULL, &dest);     dest.x+=22;
+	  SDL_RenderCopy(renderer, textTexture_a, NULL, &dest); 
 	  continue;
 	  }
 	SDL_RenderCopy(renderer, textTexture[num[i]-'0'], NULL, &dest);
-	dest.x+=22;
 	}
 	SDL_RenderPresent(renderer);
-	SDL_Delay(800);
-	//set up fps:
-	fps();
+	//SDL_Delay(20);
 	}
 	SDL_DestroyWindow(window);
 	SDL_Quit();
